@@ -202,10 +202,6 @@ async function main() {
       console.log(`処理中: ${url}`);
       await page.goto(url, { waitUntil: 'networkidle2' });
 
-      //フォローする
-      // await page.locator('div ::-p-text(フォローする)').click();
-      // console.log('フォローしました');
-
       const likeIconSelector = 'svg[aria-label="いいね！"]';
 
       let svgIconHandle: ElementHandle | null = null;
@@ -248,13 +244,7 @@ async function main() {
 
         const buttonElement = buttonElementH as ElementHandle<HTMLElement>;
         // もし HTMLElement である確信がない場合は ElementHandle<Element> にする
-        // const buttonElement = nodeButtonHandle as ElementHandle<Element>;
 
-        // console.log(buttonElement, "buttonElement (after type assertion)"); // デバッグ用
-
-        // 3. ボタン要素をクリックします。
-        //    クリック前に要素がビューポート内に入るようにスクロールします。
-        //    buttonElement は ElementHandle<HTMLElement>、evaluate 内の btn は HTMLElement
         await buttonElement.evaluate((btn: HTMLElement) => {
           // HTMLElement には scrollIntoView メソッドが存在する
           if (typeof btn.scrollIntoView === 'function') {
@@ -263,22 +253,6 @@ async function main() {
         });
 
         await buttonElement.tap();
-
-        // // 3. ボタン要素をクリックします。
-        // //    クリック前に要素がビューポート内に入るようにスクロールします。
-        // await buttonElement.evaluate(btn => {
-        //   if (typeof btn.scrollIntoView === 'function') {
-        //     // 中央に表示されるようにスクロール
-        //     btn.scrollIntoView({ block: 'center', inline: 'center' });
-        //   }
-        // });
-
-        // // スクロールやUIのレンダリングが完了するのを少し待ちます（環境に応じて調整）。
-        // await page.waitForTimeout(300);
-
-        // await buttonElement.click();
-        // console.log('いいね！ボタンをクリックしました。');
-        // return true;
 
         await waitRandom();
       } catch (error) {
