@@ -38,6 +38,12 @@ async function saveScreenshot(page: Page, name: string): Promise<void> {
   console.log(`スクリーンショット保存: ${filePath}`);
 }
 
+// 指定した範囲でランダムな待機を行う
+async function waitRandom(minMs = 15000, maxMs = 45000): Promise<void> {
+  const delay = Math.floor(Math.random() * (maxMs - minMs + 1)) + minMs;
+  return new Promise((resolve) => setTimeout(resolve, delay));
+}
+
 const clickButtonByText = async (page: Page, text: string) => {
   return await page.evaluate((targetText) => {
     const elements = Array.from(document.querySelectorAll('button'));
@@ -274,13 +280,13 @@ async function main() {
         // console.log('いいね！ボタンをクリックしました。');
         // return true;
 
-        await new Promise((resolve) => setTimeout(resolve, 2000));
+        await waitRandom();
       } catch (error) {
         console.log('いいねボタンが見つかりません:', error);
       }
 
       // 次のページに移動する前に少し待機
-      await new Promise((resolve) => setTimeout(resolve, 2000));
+      await waitRandom();
     }
   } catch (error) {
     console.error('エラーが発生しました:', error);
