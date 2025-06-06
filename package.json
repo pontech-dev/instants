@@ -1,0 +1,23 @@
+{
+  "name": "enoteca",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "ts-node src/monitor.ts",
+    "monitor": "ts-node src/monitor.ts",
+    "purchase": "ts-node src/purchase.ts",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "@types/node": "^22.14.1",
+    "dotenv": "^16.5.0",
+    "puppeteer": "^24.6.1",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.8.3"
+  }
+}
