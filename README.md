@@ -3,6 +3,7 @@
 1. Node.js 20.x 以上をインストールしてください。
 2. プロジェクトルートで `npm install` を実行し、依存パッケージをインストールします。
 3. `.env.example` を `.env` にコピーし、必要な値（Instagram の ID やパスワードなど）を設定します。
+   `LIKE_LIMIT` を変更することで、1回の実行で行う「いいね」の件数を調整できます。
 
 # データ準備
 APPIFYのInstagramでjson形式で出力
