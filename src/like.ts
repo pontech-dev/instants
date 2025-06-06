@@ -77,6 +77,17 @@ const clickAByText = async (page: Page, text: string) => {
 };
 
 const SESSION_FILE = './session.json';
+const LOG_FILE = './like_log.csv';
+
+function appendLikeLog(postUrl: string, username: string): void {
+  const header = 'post_url,like_date,owner_url\n';
+  if (!fs.existsSync(LOG_FILE)) {
+    fs.writeFileSync(LOG_FILE, header);
+  }
+  const likeDate = new Date().toISOString().split('T')[0];
+  const ownerUrl = `https://www.instagram.com/${username}/`;
+  fs.appendFileSync(LOG_FILE, `${postUrl},${likeDate},${ownerUrl}\n`);
+}
 
 async function saveSession(page: Page) {
   const cookies = await page.cookies();
@@ -183,14 +194,13 @@ async function main() {
 
     // 複数ページの処理
     const dataPath = path.resolve(__dirname, '../data.json');
-    let urls: string[] = [];
+    type DataItem = { url?: string; ownerUsername?: string };
+    let dataItems: DataItem[] = [];
     try {
       const raw = fs.readFileSync(dataPath, 'utf-8');
       const json = JSON.parse(raw);
       if (Array.isArray(json)) {
-        urls = json
-          .map((item: { url?: string }) => item.url)
-          .filter((u): u is string => typeof u === 'string');
+        dataItems = json as DataItem[];
       } else {
         console.error('data.json の形式が正しくありません');
         return;
@@ -202,7 +212,12 @@ async function main() {
 
     let likeCount = 0;
 
-    for (const url of urls) {
+    for (const item of dataItems) {
+      const url = item.url;
+      const username = item.ownerUsername || '';
+      if (!url) {
+        continue;
+      }
       if (likeCount >= config.likeLimit) {
         console.log(`いいね上限 (${config.likeLimit}) に達したため処理を終了します`);
         break;
@@ -262,6 +277,9 @@ async function main() {
 
         await buttonElement.tap();
         likeCount++;
+        if (url) {
+          appendLikeLog(url, username);
+        }
 
         await waitRandom();
       } catch (error) {

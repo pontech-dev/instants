@@ -20,3 +20,11 @@ data.jsonに貼り付け
 ```bash
   npm run like
 ```
+
+実行が完了すると `like_log.csv` に以下の形式でログが追記されます。
+
+```
+post_url,like_date,owner_url
+```
+
+`owner_url` には `data.json` の `ownerUsername` を用いたアカウントURLが記録されます。
