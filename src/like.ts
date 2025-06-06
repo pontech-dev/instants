@@ -174,10 +174,23 @@ async function main() {
     }
 
     // 複数ページの処理
-    const urls = [
-      'https://www.instagram.com/p/DKeoU55pZUm/',
-      // ... 他のURL
-    ];
+    const dataPath = path.resolve(__dirname, '../data.json');
+    let urls: string[] = [];
+    try {
+      const raw = fs.readFileSync(dataPath, 'utf-8');
+      const json = JSON.parse(raw);
+      if (Array.isArray(json)) {
+        urls = json
+          .map((item: { url?: string }) => item.url)
+          .filter((u): u is string => typeof u === 'string');
+      } else {
+        console.error('data.json の形式が正しくありません');
+        return;
+      }
+    } catch (err) {
+      console.error('data.json の読み込みに失敗しました:', err);
+      return;
+    }
 
     for (const url of urls) {
       console.log(`処理中: ${url}`);
