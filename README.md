@@ -4,15 +4,18 @@
 2. プロジェクトルートで `npm install` を実行し、依存パッケージをインストールします。
 3. `.env.example` を `.env` にコピーし、必要な値（Instagram の ID やパスワードなど）を設定します。
 
+# データ準備
+APPIFYのInstagramでjson形式で出力
+https://console.apify.com/actors/reGe1ST3OBgYZSsZJ/input
+data.jsonに貼り付け
+
 # 起動方法
 
-- TypeScript を直接実行する場合は次のコマンドで起動します。
-  ```bash
-  npm start
-  ```
-- TypeScript をビルドして実行する場合は以下を実行します。
-  ```bash
-  npm run build
-  node dist/monitor.js
-  ```
-
+- 初回のみ
+```
+  npm i
+```
+- 起動
+```bash
+  npm run like
+```

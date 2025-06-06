@@ -4,9 +4,7 @@
   "main": "index.js",
   "scripts": {
     "build": "tsc",
-    "start": "ts-node src/monitor.ts",
-    "monitor": "ts-node src/monitor.ts",
-    "purchase": "ts-node src/purchase.ts",
+    "like": "ts-node src/like.ts",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
