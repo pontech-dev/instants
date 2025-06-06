@@ -14,6 +14,7 @@ interface Config {
   checkInterval: number; // ミリ秒
   headless: boolean;
   screenshotDir: string;
+  likeLimit: number;
 }
 
 const config: Config = {
@@ -23,6 +24,7 @@ const config: Config = {
   checkInterval: parseInt(process.env.CHECK_INTERVAL || '5000'), // デフォルト5秒
   headless: process.env.HEADLESS !== 'false', // デフォルトはheadlessモード
   screenshotDir: process.env.SCREENSHOT_DIR || './screenshots',
+  likeLimit: parseInt(process.env.LIKE_LIMIT || '30'),
 };
 
 // スクリーンショット用ディレクトリの作成
@@ -198,7 +200,13 @@ async function main() {
       return;
     }
 
+    let likeCount = 0;
+
     for (const url of urls) {
+      if (likeCount >= config.likeLimit) {
+        console.log(`いいね上限 (${config.likeLimit}) に達したため処理を終了します`);
+        break;
+      }
       console.log(`処理中: ${url}`);
       await page.goto(url, { waitUntil: 'networkidle2' });
 
@@ -253,6 +261,7 @@ async function main() {
         });
 
         await buttonElement.tap();
+        likeCount++;
 
         await waitRandom();
       } catch (error) {
