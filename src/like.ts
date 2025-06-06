@@ -291,7 +291,7 @@ async function main() {
   } catch (error) {
     console.error('エラーが発生しました:', error);
   } finally {
-    // await browser.close();
+    await browser.close();
   }
 }
 
