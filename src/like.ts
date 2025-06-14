@@ -117,6 +117,10 @@ const clickFollowButton = async (page: Page): Promise<boolean> => {
       await btn.tap();
       return true;
     }
+    // 既にフォロー済みの場合
+    if (text.includes('フォロー中') || text.includes('メッセージ')) {
+      return false;
+    }
   }
   return false;
 };
@@ -233,6 +237,8 @@ async function main() {
         if (followed) {
           console.log('フォローしました');
           await waitRandom();
+        } else {
+          console.log('既にフォロー済みのためスキップ');
         }
       } catch (error) {
         console.log('フォローボタンが見つかりません:', error);
