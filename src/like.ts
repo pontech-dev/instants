@@ -119,7 +119,7 @@ const clickFollowButton = async (page: Page): Promise<boolean> => {
     }
     // 既にフォロー済みの場合
     if (text.includes('フォロー中') || text.includes('メッセージ')) {
-      return false;
+      break; // 既にフォローしているのでループを終了
     }
   }
   return false;
@@ -165,7 +165,7 @@ const isPostLiked = async (page: Page): Promise<boolean> => {
 };
 
 // メイン処理
-async function main() {
+async function main(): Promise<void> {
   const browser = await puppeteer.launch({
     headless: config.headless,
     defaultViewport: null,
