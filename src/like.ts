@@ -16,6 +16,9 @@ interface Config {
   screenshotDir: string;
   likeLimit: number;
   commentText: string;
+  followDailyLimit: number;
+  likeDailyLimit: number;
+  commentDailyLimit: number;
 }
 
 const config: Config = {
@@ -27,6 +30,9 @@ const config: Config = {
   screenshotDir: process.env.SCREENSHOT_DIR || './screenshots',
   likeLimit: parseInt(process.env.LIKE_LIMIT || '30'),
   commentText: process.env.COMMENT_TEXT || '',
+  followDailyLimit: parseInt(process.env.FOLLOW_DAILY_LIMIT || '20'),
+  likeDailyLimit: parseInt(process.env.LIKE_DAILY_LIMIT || '100'),
+  commentDailyLimit: parseInt(process.env.COMMENT_DAILY_LIMIT || '10'),
 };
 
 // スクリーンショット用ディレクトリの作成
@@ -50,6 +56,8 @@ async function waitRandom(minMs = 15000, maxMs = 45000): Promise<void> {
 
 const SESSION_FILE = './session.json';
 const LOG_FILE = './like_log.csv';
+const FOLLOW_LOG_FILE = './follow_log.csv';
+const COMMENT_LOG_FILE = './comment_log.csv';
 
 function appendLikeLog(postUrl: string, username: string): void {
   const header = 'post_url,like_date,owner_url\n';
@@ -59,6 +67,38 @@ function appendLikeLog(postUrl: string, username: string): void {
   const likeDate = new Date().toISOString().split('T')[0];
   const ownerUrl = `https://www.instagram.com/${username}/`;
   fs.appendFileSync(LOG_FILE, `${postUrl},${likeDate},${ownerUrl}\n`);
+}
+
+function appendFollowLog(username: string): void {
+  const header = 'owner_url,follow_date\n';
+  if (!fs.existsSync(FOLLOW_LOG_FILE)) {
+    fs.writeFileSync(FOLLOW_LOG_FILE, header);
+  }
+  const followDate = new Date().toISOString().split('T')[0];
+  const ownerUrl = `https://www.instagram.com/${username}/`;
+  fs.appendFileSync(FOLLOW_LOG_FILE, `${ownerUrl},${followDate}\n`);
+}
+
+function appendCommentLog(postUrl: string, username: string): void {
+  const header = 'post_url,comment_date,owner_url\n';
+  if (!fs.existsSync(COMMENT_LOG_FILE)) {
+    fs.writeFileSync(COMMENT_LOG_FILE, header);
+  }
+  const commentDate = new Date().toISOString().split('T')[0];
+  const ownerUrl = `https://www.instagram.com/${username}/`;
+  fs.appendFileSync(COMMENT_LOG_FILE, `${postUrl},${commentDate},${ownerUrl}\n`);
+}
+
+function getTodayCount(filePath: string, dateIndex: number): number {
+  if (!fs.existsSync(filePath)) {
+    return 0;
+  }
+  const today = new Date().toISOString().split('T')[0];
+  const lines = fs.readFileSync(filePath, 'utf8').trim().split('\n').slice(1);
+  return lines.filter((line) => {
+    const parts = line.split(',');
+    return parts[dateIndex] === today;
+  }).length;
 }
 
 async function saveSession(page: Page) {
@@ -223,6 +263,9 @@ async function main(): Promise<void> {
     }
 
     let likeCount = 0;
+    let todayLikeCount = getTodayCount(LOG_FILE, 1);
+    let todayFollowCount = getTodayCount(FOLLOW_LOG_FILE, 1);
+    let todayCommentCount = getTodayCount(COMMENT_LOG_FILE, 1);
 
     for (const item of dataItems) {
       const url = item.url;
@@ -239,12 +282,18 @@ async function main(): Promise<void> {
 
       // フォローボタンがあればクリック
       try {
-        const followed = await clickFollowButton(page);
-        if (followed) {
-          console.log('フォローしました');
-          await waitRandom();
+        if (todayFollowCount >= config.followDailyLimit) {
+          console.log('フォローの1日あたりの上限に達しました');
         } else {
-          console.log('既にフォロー済みのためスキップ');
+          const followed = await clickFollowButton(page);
+          if (followed) {
+            console.log('フォローしました');
+            todayFollowCount++;
+            appendFollowLog(username);
+            await waitRandom();
+          } else {
+            console.log('既にフォロー済みのためスキップ');
+          }
         }
       } catch (error) {
         console.log('フォローボタンが見つかりません:', error);
@@ -306,16 +355,27 @@ async function main(): Promise<void> {
           }
         });
 
-        await buttonElement.tap();
-        likeCount++;
-        if (url) {
-          appendLikeLog(url, username);
+        if (todayLikeCount >= config.likeDailyLimit) {
+          console.log('いいねの1日あたりの上限に達しました');
+        } else {
+          await buttonElement.tap();
+          likeCount++;
+          todayLikeCount++;
+          if (url) {
+            appendLikeLog(url, username);
+          }
         }
 
         await waitRandom();
         if (config.commentText) {
-          await postComment(page, config.commentText);
-          await waitRandom();
+          if (todayCommentCount >= config.commentDailyLimit) {
+            console.log('コメントの1日あたりの上限に達しました');
+          } else {
+            await postComment(page, config.commentText);
+            todayCommentCount++;
+            appendCommentLog(url, username);
+            await waitRandom();
+          }
         }
       } catch (error) {
         console.log('いいねボタンが見つかりません:', error);
