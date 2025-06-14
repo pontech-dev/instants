@@ -158,6 +158,12 @@ const postComment = async (page: Page, comment: string): Promise<void> => {
   }
 };
 
+// 投稿が既にいいね済みか判定する
+const isPostLiked = async (page: Page): Promise<boolean> => {
+  const unlikeIcon = await page.$('svg[aria-label="いいね！取り消し"]');
+  return unlikeIcon !== null;
+};
+
 // メイン処理
 async function main() {
   const browser = await puppeteer.launch({
@@ -250,6 +256,10 @@ async function main() {
       let buttonJsHandle: JSHandle | null = null; // SVGの祖先のbutton要素のJSHandle
 
       try {
+        if (await isPostLiked(page)) {
+          console.log('既にいいね済みのためスキップ');
+          continue;
+        }
         // 1. "いいね！" の aria-label を持つSVG要素を探します。
         //    要素が表示されるまで最大5秒待機します。
         try {
@@ -259,14 +269,16 @@ async function main() {
           console.log(
             `いいね！SVGアイコン (${likeIconSelector}) が表示されませんでした、またはタイムアウトしました。`
           );
-          return false;
+          console.log('既にいいね済みのためスキップ');
+          continue;
         }
 
         if (!svgIconHandle) {
           console.log(
             `いいね！SVGアイコン (${likeIconSelector}) が見つかりませんでした (waitForSelector後)。`
           );
-          return false;
+          console.log('既にいいね済みのためスキップ');
+          continue;
         }
 
         // 2. SVG要素の最も近い祖先で role="button" を持つ要素を探します。
@@ -281,7 +293,7 @@ async function main() {
             'クリック可能なボタン要素 (role="button"を持つ祖先) が見つかりませんでした。'
           );
           // svgIconHandle と buttonJsHandle は finally ブロックで解放されます。
-          return false;
+          continue;
         }
 
         const buttonElement = buttonElementH as ElementHandle<HTMLElement>;
