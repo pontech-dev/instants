@@ -46,36 +46,6 @@ async function waitRandom(minMs = 15000, maxMs = 45000): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, delay));
 }
 
-const clickButtonByText = async (page: Page, text: string) => {
-  return await page.evaluate((targetText) => {
-    const elements = Array.from(document.querySelectorAll('button'));
-    const button = elements.find((el) =>
-      (el.textContent?.trim().toLowerCase() || '').includes(targetText.toLowerCase())
-    );
-
-    if (button) {
-      button.click();
-      return true;
-    }
-    return false;
-  }, text);
-};
-
-const clickAByText = async (page: Page, text: string) => {
-  return await page.evaluate((targetText) => {
-    const elements = Array.from(document.querySelectorAll('a'));
-    const button = elements.find((el) =>
-      (el.textContent?.trim().toLowerCase() || '').includes(targetText.toLowerCase())
-    );
-
-    if (button) {
-      button.click();
-      return true;
-    }
-    return false;
-  }, text);
-};
-
 const SESSION_FILE = './session.json';
 const LOG_FILE = './like_log.csv';
 
@@ -131,26 +101,6 @@ async function performLogin(page: Page) {
 
   console.log('ログイン完了');
 }
-
-const clickLikeButton = async (page: Page): Promise<boolean> => {
-  return await page.evaluate(() => {
-    const likeButton = document.querySelector('svg[aria-label="いいね!"]');
-    if (likeButton) {
-      // SVGの親要素（通常はbutton）を探してクリック
-      let parent = likeButton.parentElement;
-      while (parent && parent.tagName !== 'BUTTON') {
-        parent = parent.parentElement;
-      }
-      console.log(3);
-
-      if (parent) {
-        parent.click();
-        return true;
-      }
-    }
-    return false;
-  }, false);
-};
 
 const clickFollowButton = async (page: Page): Promise<boolean> => {
   const followButtons = await page.$$('div[role="button"]');
