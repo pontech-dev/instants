@@ -15,6 +15,7 @@ interface Config {
   headless: boolean;
   screenshotDir: string;
   likeLimit: number;
+  commentText: string;
 }
 
 const config: Config = {
@@ -25,6 +26,7 @@ const config: Config = {
   headless: process.env.HEADLESS !== 'false', // デフォルトはheadlessモード
   screenshotDir: process.env.SCREENSHOT_DIR || './screenshots',
   likeLimit: parseInt(process.env.LIKE_LIMIT || '30'),
+  commentText: process.env.COMMENT_TEXT || '',
 };
 
 // スクリーンショット用ディレクトリの作成
@@ -117,6 +119,39 @@ const clickFollowButton = async (page: Page): Promise<boolean> => {
     }
   }
   return false;
+};
+
+const postComment = async (page: Page, comment: string): Promise<void> => {
+  try {
+    const inputSelector = 'textarea[aria-label="コメントを追加…"]';
+    await page.waitForSelector(inputSelector, { visible: true, timeout: 5000 });
+    await page.type(inputSelector, comment);
+
+    await page.waitForFunction(
+      () => {
+        return [...document.querySelectorAll('div[role="button"]')].some(
+          (el) => el.textContent?.trim() === '投稿する'
+        );
+      },
+      { timeout: 5000 }
+    );
+
+    const buttons = await page.$$('div[role="button"]');
+    for (const btn of buttons) {
+      const text = await btn.evaluate((el) => el.textContent?.trim() || '');
+      if (text === '投稿する') {
+        await btn.evaluate((el: HTMLElement) => {
+          el.scrollIntoView({ block: 'center', inline: 'center' });
+        });
+        await btn.tap();
+        console.log('コメントを投稿しました');
+        return;
+      }
+    }
+    console.log('投稿するボタンが見つかりませんでした');
+  } catch (error) {
+    console.log('コメント投稿に失敗:', error);
+  }
 };
 
 // メイン処理
@@ -260,6 +295,10 @@ async function main() {
         }
 
         await waitRandom();
+        if (config.commentText) {
+          await postComment(page, config.commentText);
+          await waitRandom();
+        }
       } catch (error) {
         console.log('いいねボタンが見つかりません:', error);
       }
