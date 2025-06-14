@@ -55,49 +55,45 @@ async function waitRandom(minMs = 15000, maxMs = 45000): Promise<void> {
 }
 
 const SESSION_FILE = './session.json';
-const LOG_FILE = './like_log.csv';
-const FOLLOW_LOG_FILE = './follow_log.csv';
-const COMMENT_LOG_FILE = './comment_log.csv';
+const ACTION_LOG_FILE = './action_log.csv';
+
+function ensureActionLogFile(): void {
+  const header = 'date,action,url,owner_url\n';
+  if (!fs.existsSync(ACTION_LOG_FILE)) {
+    fs.writeFileSync(ACTION_LOG_FILE, header);
+  }
+}
 
 function appendLikeLog(postUrl: string, username: string): void {
-  const header = 'post_url,like_date,owner_url\n';
-  if (!fs.existsSync(LOG_FILE)) {
-    fs.writeFileSync(LOG_FILE, header);
-  }
-  const likeDate = new Date().toISOString().split('T')[0];
+  ensureActionLogFile();
+  const date = new Date().toISOString().split('T')[0];
   const ownerUrl = `https://www.instagram.com/${username}/`;
-  fs.appendFileSync(LOG_FILE, `${postUrl},${likeDate},${ownerUrl}\n`);
+  fs.appendFileSync(ACTION_LOG_FILE, `${date},like,${postUrl},${ownerUrl}\n`);
 }
 
 function appendFollowLog(username: string): void {
-  const header = 'owner_url,follow_date\n';
-  if (!fs.existsSync(FOLLOW_LOG_FILE)) {
-    fs.writeFileSync(FOLLOW_LOG_FILE, header);
-  }
-  const followDate = new Date().toISOString().split('T')[0];
+  ensureActionLogFile();
+  const date = new Date().toISOString().split('T')[0];
   const ownerUrl = `https://www.instagram.com/${username}/`;
-  fs.appendFileSync(FOLLOW_LOG_FILE, `${ownerUrl},${followDate}\n`);
+  fs.appendFileSync(ACTION_LOG_FILE, `${date},follow,,${ownerUrl}\n`);
 }
 
 function appendCommentLog(postUrl: string, username: string): void {
-  const header = 'post_url,comment_date,owner_url\n';
-  if (!fs.existsSync(COMMENT_LOG_FILE)) {
-    fs.writeFileSync(COMMENT_LOG_FILE, header);
-  }
-  const commentDate = new Date().toISOString().split('T')[0];
+  ensureActionLogFile();
+  const date = new Date().toISOString().split('T')[0];
   const ownerUrl = `https://www.instagram.com/${username}/`;
-  fs.appendFileSync(COMMENT_LOG_FILE, `${postUrl},${commentDate},${ownerUrl}\n`);
+  fs.appendFileSync(ACTION_LOG_FILE, `${date},comment,${postUrl},${ownerUrl}\n`);
 }
 
-function getTodayCount(filePath: string, dateIndex: number): number {
-  if (!fs.existsSync(filePath)) {
+function getTodayActionCount(action: string): number {
+  if (!fs.existsSync(ACTION_LOG_FILE)) {
     return 0;
   }
   const today = new Date().toISOString().split('T')[0];
-  const lines = fs.readFileSync(filePath, 'utf8').trim().split('\n').slice(1);
+  const lines = fs.readFileSync(ACTION_LOG_FILE, 'utf8').trim().split('\n').slice(1);
   return lines.filter((line) => {
     const parts = line.split(',');
-    return parts[dateIndex] === today;
+    return parts[0] === today && parts[1] === action;
   }).length;
 }
 
@@ -263,9 +259,9 @@ async function main(): Promise<void> {
     }
 
     let likeCount = 0;
-    let todayLikeCount = getTodayCount(LOG_FILE, 1);
-    let todayFollowCount = getTodayCount(FOLLOW_LOG_FILE, 1);
-    let todayCommentCount = getTodayCount(COMMENT_LOG_FILE, 1);
+    let todayLikeCount = getTodayActionCount('like');
+    let todayFollowCount = getTodayActionCount('follow');
+    let todayCommentCount = getTodayActionCount('comment');
 
     for (const item of dataItems) {
       const url = item.url;

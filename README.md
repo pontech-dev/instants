@@ -18,10 +18,10 @@
   npm run like
 ```
 
-実行が完了すると `like_log.csv` に以下の形式でログが追記されます。
+実行が完了すると `action_log.csv` に以下の形式でログが追記されます。
 
 ```
-post_url,like_date,owner_url
+date,action,url,owner_url
 ```
 
-`owner_url` には `data.json` の `ownerUsername` を用いたアカウントURLが記録されます。
+`owner_url` には `data.json` の `ownerUsername` を用いたアカウントURLが記録されます。`action` は `like`、`follow`、`comment` のいずれかです。
