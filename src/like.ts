@@ -152,6 +152,23 @@ const clickLikeButton = async (page: Page): Promise<boolean> => {
   }, false);
 };
 
+const clickFollowButton = async (page: Page): Promise<boolean> => {
+  const followButtons = await page.$$('div[role="button"]');
+  for (const btn of followButtons) {
+    const text = await btn.evaluate((el) => el.textContent?.trim() || '');
+    if (text.includes('フォローする')) {
+      await btn.evaluate((el: HTMLElement) => {
+        if (typeof el.scrollIntoView === 'function') {
+          el.scrollIntoView({ block: 'center', inline: 'center' });
+        }
+      });
+      await btn.tap();
+      return true;
+    }
+  }
+  return false;
+};
+
 // メイン処理
 async function main() {
   const browser = await puppeteer.launch({
@@ -224,6 +241,17 @@ async function main() {
       }
       console.log(`処理中: ${url}`);
       await page.goto(url, { waitUntil: 'networkidle2' });
+
+      // フォローボタンがあればクリック
+      try {
+        const followed = await clickFollowButton(page);
+        if (followed) {
+          console.log('フォローしました');
+          await waitRandom();
+        }
+      } catch (error) {
+        console.log('フォローボタンが見つかりません:', error);
+      }
 
       const likeIconSelector = 'svg[aria-label="いいね！"]';
 
