@@ -57,6 +57,18 @@ async function waitRandom(minMs = 15000, maxMs = 45000): Promise<void> {
 const SESSION_FILE = './session.json';
 const ACTION_LOG_FILE = './action_log.csv';
 
+type ActionCounters = {
+  executed: { follow: number; like: number; comment: number };
+  skippedAlready: { follow: number; like: number; comment: number };
+  skippedLimit: { follow: number; like: number; comment: number };
+};
+
+const counters: ActionCounters = {
+  executed: { follow: 0, like: 0, comment: 0 },
+  skippedAlready: { follow: 0, like: 0, comment: 0 },
+  skippedLimit: { follow: 0, like: 0, comment: 0 },
+};
+
 function ensureActionLogFile(): void {
   const header = 'date,action,url,owner_url\n';
   if (!fs.existsSync(ACTION_LOG_FILE)) {
@@ -280,15 +292,18 @@ async function main(): Promise<void> {
       try {
         if (todayFollowCount >= config.followDailyLimit) {
           console.log('フォローの1日あたりの上限に達しました');
+          counters.skippedLimit.follow++;
         } else {
           const followed = await clickFollowButton(page);
           if (followed) {
             console.log('フォローしました');
             todayFollowCount++;
+            counters.executed.follow++;
             appendFollowLog(username);
             await waitRandom();
           } else {
             console.log('既にフォロー済みのためスキップ');
+            counters.skippedAlready.follow++;
           }
         }
       } catch (error) {
@@ -303,6 +318,7 @@ async function main(): Promise<void> {
       try {
         if (await isPostLiked(page)) {
           console.log('既にいいね済みのためスキップ');
+          counters.skippedAlready.like++;
           continue;
         }
         // 1. "いいね！" の aria-label を持つSVG要素を探します。
@@ -315,6 +331,7 @@ async function main(): Promise<void> {
             `いいね！SVGアイコン (${likeIconSelector}) が表示されませんでした、またはタイムアウトしました。`
           );
           console.log('既にいいね済みのためスキップ');
+          counters.skippedAlready.like++;
           continue;
         }
 
@@ -323,6 +340,7 @@ async function main(): Promise<void> {
             `いいね！SVGアイコン (${likeIconSelector}) が見つかりませんでした (waitForSelector後)。`
           );
           console.log('既にいいね済みのためスキップ');
+          counters.skippedAlready.like++;
           continue;
         }
 
@@ -353,9 +371,11 @@ async function main(): Promise<void> {
 
         if (todayLikeCount >= config.likeDailyLimit) {
           console.log('いいねの1日あたりの上限に達しました');
+          counters.skippedLimit.like++;
         } else {
           await buttonElement.tap();
           likeCount++;
+          counters.executed.like++;
           todayLikeCount++;
           if (url) {
             appendLikeLog(url, username);
@@ -366,9 +386,11 @@ async function main(): Promise<void> {
         if (config.commentText) {
           if (todayCommentCount >= config.commentDailyLimit) {
             console.log('コメントの1日あたりの上限に達しました');
+            counters.skippedLimit.comment++;
           } else {
             await postComment(page, config.commentText);
             todayCommentCount++;
+            counters.executed.comment++;
             appendCommentLog(url, username);
             await waitRandom();
           }
@@ -384,6 +406,15 @@ async function main(): Promise<void> {
     console.error('エラーが発生しました:', error);
   } finally {
     await browser.close();
+    const summary = {
+      executed: counters.executed,
+      skippedAlready: counters.skippedAlready,
+      skippedLimit: counters.skippedLimit,
+    };
+    console.log('Action summary');
+    console.table(summary);
+    const summaryDate = new Date().toISOString().split('T')[0].replace(/-/g, '');
+    fs.writeFileSync(`summary_${summaryDate}.txt`, JSON.stringify(summary, null, 2));
   }
 }
 
