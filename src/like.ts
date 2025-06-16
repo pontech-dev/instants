@@ -19,6 +19,7 @@ interface Config {
   followDailyLimit: number;
   likeDailyLimit: number;
   commentDailyLimit: number;
+  openaiApiKey: string;
 }
 
 const config: Config = {
@@ -33,6 +34,7 @@ const config: Config = {
   followDailyLimit: parseInt(process.env.FOLLOW_DAILY_LIMIT || '20'),
   likeDailyLimit: parseInt(process.env.LIKE_DAILY_LIMIT || '100'),
   commentDailyLimit: parseInt(process.env.COMMENT_DAILY_LIMIT || '10'),
+  openaiApiKey: process.env.OPENAI_API_KEY || '',
 };
 
 // スクリーンショット用ディレクトリの作成
@@ -173,6 +175,56 @@ const clickFollowButton = async (page: Page): Promise<boolean> => {
   return false;
 };
 
+// OpenAI APIを使ってコメントを生成する関数
+async function generateComment(caption: string): Promise<string> {
+  if (!config.openaiApiKey) {
+    console.log('OpenAI API キーが設定されていません。固定コメントを使用します。');
+    return config.commentText || '素敵な投稿ですね！';
+  }
+
+  try {
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${config.openaiApiKey}`,
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini', // より安価なモデルを使用（gpt-4.1は存在しないため修正）
+        messages: [
+          {
+            role: 'system',
+            content:
+              'あなたはInstagramのフレンドリーなフォロワーです。投稿に対して自然で親しみやすい40字以下の日本語コメントを生成してください。絵文字を適度に使い、スパムっぽくならないよう注意してください。',
+          },
+          {
+            role: 'user',
+            content: `以下の投稿に対して、自然で親しみやすいコメントを40字以下で生成してください：\n\n${caption}`,
+          },
+        ],
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`OpenAI API エラー: ${response.status} ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    const generatedComment = data.choices[0]?.message?.content?.trim();
+
+    if (!generatedComment) {
+      throw new Error('OpenAI APIからコメントを取得できませんでした');
+    }
+
+    console.log(`生成されたコメント: ${generatedComment}`);
+    return generatedComment;
+  } catch (error) {
+    console.error('OpenAI API呼び出しエラー:', error);
+    console.log('固定コメントを使用します。');
+    return config.commentText || '素敵な投稿ですね！';
+  }
+}
+
 const postComment = async (page: Page, comment: string): Promise<void> => {
   try {
     const inputSelector = 'textarea[aria-label="コメントを追加…"]';
@@ -254,7 +306,7 @@ async function main(): Promise<void> {
 
     // 複数ページの処理
     const dataPath = path.resolve(__dirname, '../data.json');
-    type DataItem = { url?: string; ownerUsername?: string };
+    type DataItem = { url?: string; ownerUsername?: string; caption?: string };
     let dataItems: DataItem[] = [];
     try {
       const raw = fs.readFileSync(dataPath, 'utf-8');
@@ -278,6 +330,7 @@ async function main(): Promise<void> {
     for (const item of dataItems) {
       const url = item.url;
       const username = item.ownerUsername || '';
+      const caption = item.caption;
       if (!url) {
         continue;
       }
@@ -383,17 +436,16 @@ async function main(): Promise<void> {
         }
 
         await waitRandom();
-        if (config.commentText) {
-          if (todayCommentCount >= config.commentDailyLimit) {
-            console.log('コメントの1日あたりの上限に達しました');
-            counters.skippedLimit.comment++;
-          } else {
-            await postComment(page, config.commentText);
-            todayCommentCount++;
-            counters.executed.comment++;
-            appendCommentLog(url, username);
-            await waitRandom();
-          }
+        if (todayCommentCount >= config.commentDailyLimit) {
+          console.log('コメントの1日あたりの上限に達しました');
+          counters.skippedLimit.comment++;
+        } else {
+          const commentToPost = await generateComment(caption || '素敵な投稿ですね!');
+          await postComment(page, commentToPost);
+          todayCommentCount++;
+          counters.executed.comment++;
+          appendCommentLog(url, username);
+          await waitRandom();
         }
       } catch (error) {
         console.log('いいねボタンが見つかりません:', error);
